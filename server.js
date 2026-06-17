@@ -1,23 +1,22 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
-require("dotenv").config();
-
 const multer = require("multer");
 const {CloudinaryStorage} = require("multer-storage-cloudinary");
 const cloudinary = require("cloudinary").v2;
+
+require("dotenv").config();
 
 
 const app = express();
 
 
-app.use(express.json());
 app.use(cors());
 
+app.use(express.json());
 
 
 
-// CLOUDINARY
 
 
 cloudinary.config({
@@ -28,8 +27,8 @@ api_key:process.env.CLOUDINARY_API_KEY,
 
 api_secret:process.env.CLOUDINARY_API_SECRET
 
-
 });
+
 
 
 
@@ -38,17 +37,13 @@ const storage = new CloudinaryStorage({
 
 cloudinary:cloudinary,
 
-
 params:{
-
 
 folder:"galeria_multimedia",
 
 resource_type:"auto"
 
-
 }
-
 
 });
 
@@ -61,55 +56,38 @@ const upload = multer({storage});
 
 
 
-// MONGODB
-
 
 mongoose.connect(process.env.MONGO_URI)
 
-.then(()=>console.log("✅ MongoDB conectado"))
+.then(()=>console.log("MongoDB conectado"))
 
-.catch(error=>console.log(error));
-
-
+.catch(e=>console.log(e));
 
 
 
 
 
-// MODELO
 
 
-const MultimediaSchema = new mongoose.Schema({
 
+const MultimediaSchema =
+new mongoose.Schema({
 
 titulo:String,
 
-
 descripcion:String,
-
 
 imagenUrl:String,
 
-
-audioUrl:String,
-
-
-fechaCreacion:{
-
-
-type:Date,
-
-default:Date.now
-
-
-}
+audioUrl:String
 
 
 });
 
 
 
-const Multimedia = mongoose.model(
+const Multimedia =
+mongoose.model(
 "Multimedia",
 MultimediaSchema
 );
@@ -121,75 +99,20 @@ MultimediaSchema
 
 
 
-// MOSTRAR TODOS
+// MOSTRAR
 
 
 app.get("/multimedia",async(req,res)=>{
 
 
-try{
-
-
-const datos = await Multimedia.find();
+const datos =
+await Multimedia.find();
 
 
 res.json(datos);
 
 
-
-}catch(error){
-
-
-res.status(500).json({
-
-error:error.message
-
 });
-
-
-}
-
-
-});
-
-
-
-
-
-
-
-// OBTENER UNO PARA EDITAR
-
-
-app.get("/multimedia/:id",async(req,res)=>{
-
-
-try{
-
-
-const dato =
-await Multimedia.findById(req.params.id);
-
-
-res.json(dato);
-
-
-
-}catch(error){
-
-
-res.status(500).json({
-
-error:error.message
-
-});
-
-
-}
-
-
-});
-
 
 
 
@@ -216,12 +139,7 @@ upload.fields([
 async(req,res)=>{
 
 
-try{
-
-
-
 const nuevo = new Multimedia({
-
 
 
 titulo:req.body.titulo,
@@ -231,21 +149,16 @@ descripcion:req.body.descripcion,
 
 
 imagenUrl:
-
-req.files.imagen ?
-
+req.files.imagen
+?
 req.files.imagen[0].path
-
 :"",
 
 
-
 audioUrl:
-
-req.files.audio ?
-
+req.files.audio
+?
 req.files.audio[0].path
-
 :""
 
 
@@ -253,53 +166,105 @@ req.files.audio[0].path
 });
 
 
-
-
 await nuevo.save();
-
 
 
 res.json(nuevo);
 
 
 
-}catch(error){
+});
 
 
-res.status(500).json({
 
-error:error.message
+
+
+
+
+
+
+// OBTENER UNO
+
+
+app.get("/multimedia/:id",async(req,res)=>{
+
+
+const dato =
+await Multimedia.findById(req.params.id);
+
+
+res.json(dato);
+
 
 });
 
 
-}
-
-
-
-}
-
-);
 
 
 
 
 
 
-
-
-// ACTUALIZAR
-
+// ACTUALIZAR TEXTO
 
 app.put(
 
 "/multimedia/:id",
+
+upload.fields([
+
+{name:"imagen",maxCount:1},
+
+{name:"audio",maxCount:1}
+
+]),
 
 
 async(req,res)=>{
 
 
 try{
+
+
+const datos = {
+
+titulo:req.body.titulo,
+
+descripcion:req.body.descripcion
+
+};
+
+
+
+
+// si mandas nueva imagen
+
+if(req.files.imagen){
+
+
+datos.imagenUrl =
+req.files.imagen[0].path;
+
+
+}
+
+
+
+
+
+// si mandas nuevo audio
+
+if(req.files.audio){
+
+
+datos.audioUrl =
+req.files.audio[0].path;
+
+
+}
+
+
+
 
 
 const actualizado =
@@ -310,14 +275,16 @@ await Multimedia.findByIdAndUpdate(
 req.params.id,
 
 
-req.body,
+datos,
 
 
-{new:true}
-
+{
+new:true
+}
 
 
 );
+
 
 
 
@@ -328,6 +295,7 @@ res.json(actualizado);
 }catch(error){
 
 
+
 res.status(500).json({
 
 error:error.message
@@ -335,15 +303,14 @@ error:error.message
 });
 
 
+
 }
 
 
-});
 
+}
 
-
-
-
+);
 
 
 
@@ -351,14 +318,7 @@ error:error.message
 // ELIMINAR
 
 
-app.delete(
-
-"/multimedia/:id",
-
-async(req,res)=>{
-
-
-try{
+app.delete("/multimedia/:id",async(req,res)=>{
 
 
 await Multimedia.findByIdAndDelete(
@@ -376,20 +336,6 @@ mensaje:"Eliminado"
 });
 
 
-
-}catch(error){
-
-
-res.status(500).json({
-
-error:error.message
-
-});
-
-
-}
-
-
 });
 
 
@@ -399,19 +345,8 @@ error:error.message
 
 
 
-const PORT =
-process.env.PORT || 3000;
+app.listen(3000,()=>{
 
-
-
-app.listen(PORT,()=>{
-
-
-console.log(
-
-`🚀 Servidor activo en ${PORT}`
-
-);
-
+console.log("Servidor activo");
 
 });
